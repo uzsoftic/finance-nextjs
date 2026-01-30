@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 import { useFinanceStore } from '@/lib/store';
 import { useShallow } from 'zustand/react/shallow';
 import { formatCurrency } from '@/lib/utils/formatting';
+import { OfflineIndicator } from '@/components/offline-indicator';
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -88,6 +89,9 @@ export default function MainLayout({
             <div className="text-xl sm:text-2xl font-bold tracking-tight truncate">
               {formatCurrency(totalBalance, baseCurrency)}
             </div>
+            <div className="flex justify-center mt-0.5">
+              <OfflineIndicator />
+            </div>
           </div>
           {renderHeaderRight()}
         </div>
@@ -98,9 +102,9 @@ export default function MainLayout({
         {children}
       </main>
 
-      {/* Bottom Navigation – fixed with safe area so it doesn't overlap content */}
-      <nav className="fixed bottom-0 left-0 right-0 border-t border-[#e5e7eb] dark:border-[#374151] bg-card safe-area-inset-bottom z-10">
-        <div className="flex items-center justify-around">
+      {/* Bottom Navigation – w100, 5 ta element teng sigadi */}
+      <nav className="fixed bottom-0 left-0 right-0 w-full max-w-[100vw] border-t border-[#e5e7eb] dark:border-[#374151] bg-card safe-area-inset-bottom z-10">
+        <div className="grid grid-cols-5 w-full min-w-0">
           {TABS.map((tab) => {
             const Icon = tab.icon;
             return (
@@ -108,15 +112,15 @@ export default function MainLayout({
                 key={tab.id}
                 onClick={() => onTabChange(tab.id)}
                 className={cn(
-                  'flex flex-col items-center justify-center gap-1 flex-1 py-3 px-4 transition-colors',
+                  'flex flex-col items-center justify-center gap-0.5 min-w-0 w-full py-2.5 px-1 transition-colors',
                   'hover:bg-muted active:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                   activeTab === tab.id ? 'text-primary bg-muted' : 'text-muted-foreground'
                 )}
                 aria-label={tab.label}
                 aria-current={activeTab === tab.id ? 'page' : undefined}
               >
-                <Icon className="w-6 h-6 shrink-0" />
-                <span className="text-xs font-medium truncate max-w-full">{tab.label}</span>
+                <Icon className="w-5 h-5 sm:w-6 sm:h-6 shrink-0" />
+                <span className="text-[10px] sm:text-xs font-medium truncate w-full text-center">{tab.label}</span>
               </button>
             );
           })}

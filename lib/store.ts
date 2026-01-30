@@ -21,6 +21,7 @@ import {
   SavingsGoalRepository,
 } from './db/repositories';
 import { seedDatabase, loadDemoData as seedLoadDemoData } from './db/seed';
+import { isOnline, pullFromServer } from './sync/sync';
 
 interface FinanceStore {
   // Wallets
@@ -306,7 +307,7 @@ export const useFinanceStore = create<FinanceStore>()(
         set({ preferences: prefs });
       },
 
-      // Initialize all data (only in browser – IndexedDB). When seed runs, use returned data so we don't rely on DB read (avoids chunk instance mismatch).
+      // Initialize: local DB first (offline-first). When online, sync from API then reload from DB.
       initialize: async () => {
         if (typeof window === 'undefined') return;
         set({ isLoading: true });
@@ -334,6 +335,22 @@ export const useFinanceStore = create<FinanceStore>()(
               get().loadSavingsGoals(),
               get().loadPreferences(),
             ]);
+          }
+          // Onlaynda API dan sync qilib local DB ni yangilaymiz
+          if (isOnline()) {
+            try {
+              const synced = await pullFromServer();
+              if (synced) {
+                await Promise.all([
+                  get().loadWallets(),
+                  get().loadTransactions(),
+                  get().loadCategories(),
+                  get().loadDebts(),
+                ]);
+              }
+            } catch (_) {
+              // Sync xato bo‘lsa ham lokal ma’lumot bilan ishlashda davom etamiz
+            }
           }
         } catch (err) {
           console.error('[FinanceStore] initialize failed:', err);

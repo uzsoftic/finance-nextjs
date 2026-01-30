@@ -2,6 +2,7 @@ import React from "react"
 import type { Metadata, Viewport } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import { Analytics } from '@vercel/analytics/next';
+import { PwaRegister } from '@/components/pwa-register';
 import './globals.css';
 
 const _geist = Geist({ subsets: ['latin'] });
@@ -48,6 +49,7 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning className="dark">
       <body className="font-sans antialiased bg-background text-foreground overflow-hidden">
         {children}
+        <PwaRegister />
         <Analytics />
       </body>
     </html>
