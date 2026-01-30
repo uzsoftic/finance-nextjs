@@ -894,7 +894,7 @@ function EditDebtFormWithAmountChange({
   const handleAmountKey = (key: string) => {
     if (key === 'backspace') setAmountStr((s) => s.replace(/\s/g, '').slice(0, -1).replace(/\B(?=(\d{3})+(?!\d))/g, ' '));
     else if (key === '.') setAmountStr((s) => (s.replace(/\s/g, '') || '0') + '.');
-    else if (key >= '0' && key <= '9') setAmountStr((s) => { const next = (s.replace(/\s/g, '') || '0').replace(/^0(?=\d)/, '') + key; return next.replace(/\B(?=(\d{3})+(?!\d))/g, ' '); });
+    else if (key >= '0' && key <= '9') setAmountStr((s) => { const raw = s.replace(/\s/g, '') || '0'; const next = raw === '0' && key !== '0' && !raw.includes('.') ? key : raw + key; return next.replace(/\B(?=(\d{3})+(?!\d))/g, ' '); });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -1106,9 +1106,15 @@ function AddWalletForm({
   const [name, setName] = useState('');
   const [currency, setCurrency] = useState(wallets[0]?.currency || 'UZS');
   const [type, setType] = useState<'cash' | 'card' | 'savings' | 'other'>(group === 'savings' ? 'savings' : 'card');
-  const [initialBalance, setInitialBalance] = useState(0);
+  const [initialBalanceStr, setInitialBalanceStr] = useState('');
   const [color, setColor] = useState(group === 'savings' ? '#f59e0b' : '#3b82f6');
   const [icon, setIcon] = useState('Wallet');
+  const initialBalance = parseAmountStr(initialBalanceStr);
+  const handleBalanceKey = (key: string) => {
+    if (key === 'backspace') setInitialBalanceStr((s) => s.replace(/\s/g, '').slice(0, -1).replace(/\B(?=(\d{3})+(?!\d))/g, ' '));
+    else if (key === '.') setInitialBalanceStr((s) => (s.replace(/\s/g, '') || '0') + '.');
+    else if (key >= '0' && key <= '9') setInitialBalanceStr((s) => { const raw = s.replace(/\s/g, '') || '0'; const next = raw === '0' && key !== '0' && !raw.includes('.') ? key : raw + key; return next.replace(/\B(?=(\d{3})+(?!\d))/g, ' '); });
+  };
   const getIcon = (iconName?: string) => {
     const map: Record<string, React.ComponentType<{ className?: string }>> = {
       CreditCard, Banknote, PiggyBank, Wallet, Building2, DollarSign, Tag,
@@ -1171,13 +1177,24 @@ function AddWalletForm({
         )}
         <div>
           <Label className="text-sm">Initial balance</Label>
-          <Input
-            type="number"
-            value={initialBalance || ''}
-            onChange={(e) => setInitialBalance(parseFloat(e.target.value) || 0)}
-            placeholder="0"
-            className="mt-1"
-          />
+          <div className="flex items-baseline gap-1 flex-wrap mt-1">
+            <input type="text" inputMode="decimal" value={initialBalanceStr} onChange={(e) => setInitialBalanceStr(formatAmountWithSpaces(e.target.value.replace(/[^\d.\s,]/g, '')))} placeholder="0" className="flex-1 min-w-[120px] text-xl font-bold bg-muted/50 border border-border rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-primary" />
+            <span className="text-sm font-medium text-muted-foreground shrink-0">{currency}</span>
+          </div>
+          <div className="grid grid-cols-4 gap-1 mt-2">
+            <KeypadBtn onClick={() => handleBalanceKey('7')}>7</KeypadBtn>
+            <KeypadBtn onClick={() => handleBalanceKey('8')}>8</KeypadBtn>
+            <KeypadBtn onClick={() => handleBalanceKey('9')}>9</KeypadBtn>
+            <KeypadBtn onClick={() => handleBalanceKey('backspace')}><Delete className="w-4 h-4" /></KeypadBtn>
+            <KeypadBtn onClick={() => handleBalanceKey('4')}>4</KeypadBtn>
+            <KeypadBtn onClick={() => handleBalanceKey('5')}>5</KeypadBtn>
+            <KeypadBtn onClick={() => handleBalanceKey('6')}>6</KeypadBtn>
+            <KeypadBtn onClick={() => handleBalanceKey('0')}>0</KeypadBtn>
+            <KeypadBtn onClick={() => handleBalanceKey('1')}>1</KeypadBtn>
+            <KeypadBtn onClick={() => handleBalanceKey('2')}>2</KeypadBtn>
+            <KeypadBtn onClick={() => handleBalanceKey('3')}>3</KeypadBtn>
+            <KeypadBtn onClick={() => handleBalanceKey('.')}>.</KeypadBtn>
+          </div>
         </div>
         <div>
           <Label className="text-sm">Icon</Label>
@@ -1327,9 +1344,15 @@ function AddDebtForm({
   onClose: () => void;
 }) {
   const [name, setName] = useState('');
-  const [amount, setAmount] = useState(0);
+  const [amountStr, setAmountStr] = useState('');
   const [currency, setCurrency] = useState('UZS');
   const [direction, setDirection] = useState<'I_OWE' | 'IM_OWED'>('I_OWE');
+  const amount = parseAmountStr(amountStr);
+  const handleAmountKey = (key: string) => {
+    if (key === 'backspace') setAmountStr((s) => s.replace(/\s/g, '').slice(0, -1).replace(/\B(?=(\d{3})+(?!\d))/g, ' '));
+    else if (key === '.') setAmountStr((s) => (s.replace(/\s/g, '') || '0') + '.');
+    else if (key >= '0' && key <= '9') setAmountStr((s) => { const raw = s.replace(/\s/g, '') || '0'; const next = raw === '0' && key !== '0' && !raw.includes('.') ? key : raw + key; return next.replace(/\B(?=(\d{3})+(?!\d))/g, ' '); });
+  };
 
   return (
     <div className="p-4 pb-8">
@@ -1350,40 +1373,34 @@ function AddDebtForm({
         <div>
           <Label className="text-sm">Direction</Label>
           <div className="flex gap-2 mt-1">
-            <button
-              type="button"
-              onClick={() => setDirection('I_OWE')}
-              className={`flex-1 py-2 rounded-lg text-sm font-medium ${direction === 'I_OWE' ? 'bg-rose-500 text-white' : 'bg-muted text-muted-foreground'}`}
-            >
-              I owe
-            </button>
-            <button
-              type="button"
-              onClick={() => setDirection('IM_OWED')}
-              className={`flex-1 py-2 rounded-lg text-sm font-medium ${direction === 'IM_OWED' ? 'bg-emerald-500 text-white' : 'bg-muted text-muted-foreground'}`}
-            >
-              I&apos;m owed
-            </button>
+            <button type="button" onClick={() => setDirection('I_OWE')} className={`flex-1 py-2 rounded-lg text-sm font-medium ${direction === 'I_OWE' ? 'bg-rose-500 text-white' : 'bg-muted text-muted-foreground'}`}>I owe</button>
+            <button type="button" onClick={() => setDirection('IM_OWED')} className={`flex-1 py-2 rounded-lg text-sm font-medium ${direction === 'IM_OWED' ? 'bg-emerald-500 text-white' : 'bg-muted text-muted-foreground'}`}>I&apos;m owed</button>
           </div>
         </div>
         <div>
           <Label className="text-sm">Amount</Label>
-          <Input
-            type="number"
-            value={amount || ''}
-            onChange={(e) => setAmount(parseFloat(e.target.value) || 0)}
-            placeholder="0"
-            className="mt-1"
-            required
-          />
+          <div className="flex items-baseline gap-1 flex-wrap mt-1">
+            <input type="text" inputMode="decimal" value={amountStr} onChange={(e) => setAmountStr(formatAmountWithSpaces(e.target.value.replace(/[^\d.\s,]/g, '')))} placeholder="0" className={`flex-1 min-w-[120px] text-xl font-bold bg-muted/50 border border-border rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-primary ${direction === 'I_OWE' ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'}`} />
+            <span className="text-sm font-medium text-muted-foreground shrink-0">{currency}</span>
+          </div>
+          <div className="grid grid-cols-4 gap-1 mt-2">
+            <KeypadBtn onClick={() => handleAmountKey('7')}>7</KeypadBtn>
+            <KeypadBtn onClick={() => handleAmountKey('8')}>8</KeypadBtn>
+            <KeypadBtn onClick={() => handleAmountKey('9')}>9</KeypadBtn>
+            <KeypadBtn onClick={() => handleAmountKey('backspace')}><Delete className="w-4 h-4" /></KeypadBtn>
+            <KeypadBtn onClick={() => handleAmountKey('4')}>4</KeypadBtn>
+            <KeypadBtn onClick={() => handleAmountKey('5')}>5</KeypadBtn>
+            <KeypadBtn onClick={() => handleAmountKey('6')}>6</KeypadBtn>
+            <KeypadBtn onClick={() => handleAmountKey('0')}>0</KeypadBtn>
+            <KeypadBtn onClick={() => handleAmountKey('1')}>1</KeypadBtn>
+            <KeypadBtn onClick={() => handleAmountKey('2')}>2</KeypadBtn>
+            <KeypadBtn onClick={() => handleAmountKey('3')}>3</KeypadBtn>
+            <KeypadBtn onClick={() => handleAmountKey('.')}>.</KeypadBtn>
+          </div>
         </div>
         <div>
           <Label className="text-sm">Currency</Label>
-          <select
-            value={currency}
-            onChange={(e) => setCurrency(e.target.value)}
-            className="w-full h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-primary mt-1"
-          >
+          <select value={currency} onChange={(e) => setCurrency(e.target.value)} className="w-full h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-primary mt-1">
             <option value="UZS">UZS</option>
             <option value="USD">USD</option>
             <option value="EUR">EUR</option>
@@ -1391,7 +1408,7 @@ function AddDebtForm({
         </div>
         <div className="flex gap-2 pt-2">
           <Button type="button" variant="outline" className="flex-1" onClick={onClose}>Cancel</Button>
-          <Button type="submit" className="flex-1">Save</Button>
+          <Button type="submit" className="flex-1" disabled={amount <= 0}>Save</Button>
         </div>
       </form>
     </div>
