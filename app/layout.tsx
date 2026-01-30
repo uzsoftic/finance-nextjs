@@ -36,6 +36,7 @@ export const viewport: Viewport = {
   maximumScale: 1,
   userScalable: false,
   themeColor: '#1a1f2e',
+  viewportFit: 'cover', /* enables env(safe-area-inset-*) on iOS */
 };
 
 export default function RootLayout({

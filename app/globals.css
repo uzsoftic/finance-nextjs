@@ -114,6 +114,14 @@
   --color-sidebar-ring: var(--sidebar-ring); /* Added from diff */
 }
 
+/* Safe area for mobile (notch, home indicator) */
+.safe-area-inset-top {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+.safe-area-inset-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
 @layer base {
   :root {
     color-scheme: light;
@@ -127,8 +135,15 @@
     @apply border-border outline-ring/50; /* Updated from diff */
   }
 
+  html {
+    overflow-x: hidden;
+  }
+
   body {
-    @apply bg-background text-foreground; /* Updated from diff */
+    @apply bg-background text-foreground;
+    min-height: 100dvh;
+    min-height: 100vh; /* fallback */
+    overflow-x: hidden;
   }
 }
 

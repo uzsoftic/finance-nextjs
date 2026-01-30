@@ -4,6 +4,7 @@ import React from "react"
 import { Wallet, Send, Layers2, PieChart, BarChart3, User, Building2, Pencil } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useFinanceStore } from '@/lib/store';
+import { useShallow } from 'zustand/react/shallow';
 import { formatCurrency } from '@/lib/utils/formatting';
 
 interface MainLayoutProps {
@@ -32,11 +33,10 @@ export default function MainLayout({
   onCategoriesEditToggle,
   headerRightAction,
 }: MainLayoutProps) {
-  const { wallets } = useFinanceStore();
+  const { wallets } = useFinanceStore(useShallow((s) => ({ wallets: s.wallets })));
   const isCategories = activeTab === 'categories';
   const showEditButton = isCategories && onCategoriesEditToggle;
 
-  // Calculate total balance
   const totalBalance = wallets.reduce((sum, wallet) => sum + wallet.currentBalance, 0);
   const baseCurrency = wallets[0]?.currency || 'UZS';
 
@@ -72,10 +72,13 @@ export default function MainLayout({
     );
   };
 
+  /* Bottom nav height: ~56px + safe area. Content padding so it doesn't sit under nav. */
+  const navHeightClass = 'pb-[calc(3.5rem+env(safe-area-inset-bottom,0px))]';
+
   return (
-    <div className="flex flex-col h-screen bg-background text-foreground">
+    <div className="flex flex-col min-h-[100dvh] max-h-[100dvh] h-[100dvh] bg-background text-foreground overflow-x-hidden">
       {/* Header – profile left, All accounts + balance center, icon right */}
-      <header className="border-b border-border bg-card px-3 py-3 safe-area-inset-top">
+      <header className="shrink-0 border-b border-border bg-card px-3 py-3 safe-area-inset-top">
         <div className="flex items-center justify-between gap-2">
           <button type="button" className="p-2 rounded-full hover:bg-muted transition" aria-label="Profile">
             <User className="w-6 h-6 text-muted-foreground" />
@@ -90,13 +93,13 @@ export default function MainLayout({
         </div>
       </header>
 
-      {/* Content */}
-      <main className="flex-1 overflow-y-auto pb-20">
+      {/* Content – flex-1 min-h-0 so overflow works inside flex */}
+      <main className={cn('flex-1 min-h-0 overflow-y-auto overflow-x-hidden scrollbar-vertical-pretty', navHeightClass)}>
         {children}
       </main>
 
-      {/* Bottom Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 border-t border-[#e5e7eb] dark:border-[#374151] bg-card safe-area-inset-bottom">
+      {/* Bottom Navigation – fixed with safe area so it doesn't overlap content */}
+      <nav className="fixed bottom-0 left-0 right-0 border-t border-[#e5e7eb] dark:border-[#374151] bg-card safe-area-inset-bottom z-10">
         <div className="flex items-center justify-around">
           {TABS.map((tab) => {
             const Icon = tab.icon;
@@ -105,15 +108,15 @@ export default function MainLayout({
                 key={tab.id}
                 onClick={() => onTabChange(tab.id)}
                 className={cn(
-                  'flex flex-col items-center justify-center gap-1 flex-1 py-3 px-4 transition',
+                  'flex flex-col items-center justify-center gap-1 flex-1 py-3 px-4 transition-colors',
                   'hover:bg-muted active:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                   activeTab === tab.id ? 'text-primary bg-muted' : 'text-muted-foreground'
                 )}
                 aria-label={tab.label}
                 aria-current={activeTab === tab.id ? 'page' : undefined}
               >
-                <Icon className="w-6 h-6" />
-                <span className="text-xs font-medium">{tab.label}</span>
+                <Icon className="w-6 h-6 shrink-0" />
+                <span className="text-xs font-medium truncate max-w-full">{tab.label}</span>
               </button>
             );
           })}
