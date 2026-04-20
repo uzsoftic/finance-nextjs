@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { Plus, CreditCard, Banknote, PiggyBank, Wallet, HandCoins, Tag, Building2, DollarSign, Pencil, ArrowLeftRight, ArrowDownToLine, ArrowUpFromLine, List, Wallet as WalletIcon, Delete } from 'lucide-react';
 import { useFinanceStore } from '@/lib/store';
 import { formatCurrency, getAmountColor, getAmountPrefix } from '@/lib/utils/formatting';
@@ -49,11 +49,13 @@ export default function AccountsTab({
   const [activeSubTab, setActiveSubTab] = useState<AccountsSubTab>('accounts');
   const [addSheetOpen, setAddSheetOpen] = useState(false);
   const [addType, setAddType] = useState<AddAccountType>(null);
-  const [detailAccount, setDetailAccount] = useState<WalletModel | null>(null);
-  const [detailDebt, setDetailDebt] = useState<Debt | null>(null);
+  const [detailAccountId, setDetailAccountId] = useState<string | null>(null);
+  const [detailDebtId, setDetailDebtId] = useState<string | null>(null);
 
   const walletList = wallets.filter((w) => w != null && w.group !== 'savings');
   const savingsList = wallets.filter((w) => w != null && w.group === 'savings');
+  const detailAccount = detailAccountId ? wallets.find((w) => w.id === detailAccountId) ?? null : null;
+  const detailDebt = detailDebtId ? debts.find((d) => d.id === detailDebtId) ?? null : null;
   const addSheetOpenEffective = addSheetOpen || addOpenFromHeader;
   const effectiveAddType = addOpenFromHeader && activeSubTab === 'debts' ? 'debt' : addType;
 
@@ -84,9 +86,15 @@ export default function AccountsTab({
   const otherCategoryId = useMemo(() => categories.find((c) => c.name === 'Other')?.id ?? categories.filter((c) => c.type === 'expense' || c.type === 'both')[0]?.id, [categories]);
 
   const handleCloseDetail = () => {
-    setDetailAccount(null);
-    setDetailDebt(null);
+    setDetailAccountId(null);
+    setDetailDebtId(null);
   };
+
+  // Agar wallet yoki debt o‘chirilgan bo‘lsa, detail id ni tozalash (asosiy ro‘yxat yo‘qolmasin)
+  useEffect(() => {
+    if (detailAccountId && !wallets.some((w) => w.id === detailAccountId)) setDetailAccountId(null);
+    if (detailDebtId && !debts.some((d) => d.id === detailDebtId)) setDetailDebtId(null);
+  }, [detailAccountId, detailDebtId, wallets, debts]);
 
   return (
     <div className="flex flex-col h-full bg-background">
@@ -128,7 +136,7 @@ export default function AccountsTab({
                       <button
                         key={w.id}
                         type="button"
-                        onClick={() => setDetailAccount(w)}
+                        onClick={() => setDetailAccountId(w.id)}
                         className="w-full bg-card border border-border rounded-xl p-4 flex items-center justify-between hover:bg-muted/50 transition text-left"
                       >
                         <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -168,7 +176,7 @@ export default function AccountsTab({
                       <button
                         key={w.id}
                         type="button"
-                        onClick={() => setDetailAccount(w)}
+                        onClick={() => setDetailAccountId(w.id)}
                         className="w-full bg-card border border-border rounded-xl p-4 flex items-center justify-between hover:bg-muted/50 transition text-left"
                       >
                         <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -207,7 +215,7 @@ export default function AccountsTab({
                   <button
                     key={debt.id}
                     type="button"
-                    onClick={() => setDetailDebt(debt)}
+                    onClick={() => setDetailDebtId(debt.id)}
                     className={`w-full bg-card border border-border rounded-xl p-4 flex items-center justify-between hover:bg-muted/50 transition text-left ${
                       debt.direction === 'I_OWE'
                         ? 'border-rose-500/30 bg-rose-500/5'
@@ -764,7 +772,7 @@ function TransferForm({ fromAccount, otherWallets, getWalletIcon, onSave, onClos
   const [amountStr, setAmountStr] = useState('');
   const amount = parseAmountStr(amountStr);
   const toWallet = otherWallets.find((w) => w.id === toWalletId);
-  const ToIcon = toWallet ? getWalletIcon(toWallet) : Wallet;
+  const canTransfer = otherWallets.length > 0 && toWalletId && amount > 0;
   const handleKey = (key: string) => {
     if (key === 'backspace') setAmountStr((s) => s.replace(/\s/g, '').slice(0, -1).replace(/\B(?=(\d{3})+(?!\d))/g, ' '));
     else if (key === '.') setAmountStr((s) => (s.replace(/\s/g, '') || '0') + '.');
@@ -773,45 +781,51 @@ function TransferForm({ fromAccount, otherWallets, getWalletIcon, onSave, onClos
   return (
     <div className="p-4 flex flex-col min-h-0">
       <button type="button" onClick={onClose} className="flex items-center gap-1 text-sm text-muted-foreground mb-3">← Back</button>
-      <div className="grid grid-cols-2 gap-2 mb-3">
-        <div className="rounded-xl p-2.5 bg-sky-500/15 border border-sky-500/25">
-          <span className="text-[10px] text-sky-600 dark:text-sky-400 font-medium uppercase tracking-wide">From</span>
-          <div className="flex items-center gap-2 mt-1">
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white shrink-0" style={{ backgroundColor: fromAccount.color || '#0ea5e9' }}>
-              {React.createElement(getWalletIcon(fromAccount), { className: 'w-4 h-4' })}
+      {otherWallets.length === 0 ? (
+        <p className="text-sm text-muted-foreground py-4">Transfer qilish uchun boshqa hamyon yoki saving qo‘shing (Accounts yoki Savings).</p>
+      ) : (
+        <>
+          <div className="grid grid-cols-2 gap-2 mb-3">
+            <div className="rounded-xl p-2.5 bg-sky-500/15 border border-sky-500/25">
+              <span className="text-[10px] text-sky-600 dark:text-sky-400 font-medium uppercase tracking-wide">From</span>
+              <div className="flex items-center gap-2 mt-1">
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white shrink-0" style={{ backgroundColor: fromAccount.color || '#0ea5e9' }}>
+                  {React.createElement(getWalletIcon(fromAccount), { className: 'w-4 h-4' })}
+                </div>
+                <span className="text-sm font-medium truncate">{fromAccount.name}</span>
+              </div>
             </div>
-            <span className="text-sm font-medium truncate">{fromAccount.name}</span>
+            <div className="rounded-xl p-2.5 bg-muted/25 border border-border">
+              <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide">To</span>
+              <select value={toWalletId} onChange={(e) => setToWalletId(e.target.value)} className="w-full mt-1 bg-transparent border-none outline-none text-sm font-medium focus:ring-0 p-0">
+                {otherWallets.map((w) => (
+                  <option key={w.id} value={w.id}>{w.name}</option>
+                ))}
+              </select>
+            </div>
           </div>
-        </div>
-        <div className="rounded-xl p-2.5 bg-muted/25 border border-border">
-          <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide">To</span>
-          <select value={toWalletId} onChange={(e) => setToWalletId(e.target.value)} className="w-full mt-1 bg-transparent border-none outline-none text-sm font-medium focus:ring-0 p-0">
-            {otherWallets.map((w) => (
-              <option key={w.id} value={w.id}>{w.name}</option>
-            ))}
-          </select>
-        </div>
-      </div>
-      <p className="text-xs text-muted-foreground mb-1">Amount</p>
-      <div className="mb-3 flex items-baseline gap-1 flex-wrap">
-        <input type="text" inputMode="decimal" value={amountStr} onChange={(e) => setAmountStr(formatAmountWithSpaces(e.target.value.replace(/[^\d.\s,]/g, '')))} placeholder="0" className="flex-1 min-w-[120px] text-2xl font-bold bg-transparent border-none outline-none focus:ring-0 p-0 placeholder:text-muted-foreground/50 text-foreground" />
-        <span className="text-lg font-medium text-muted-foreground shrink-0">{fromAccount.currency}</span>
-      </div>
-      <div className="mt-auto grid grid-cols-3 gap-1 p-2 bg-muted/30 rounded-xl min-h-[180px]">
-        <KeypadBtn onClick={() => handleKey('7')}>7</KeypadBtn>
-        <KeypadBtn onClick={() => handleKey('8')}>8</KeypadBtn>
-        <KeypadBtn onClick={() => handleKey('9')}>9</KeypadBtn>
-        <KeypadBtn onClick={() => handleKey('4')}>4</KeypadBtn>
-        <KeypadBtn onClick={() => handleKey('5')}>5</KeypadBtn>
-        <KeypadBtn onClick={() => handleKey('6')}>6</KeypadBtn>
-        <KeypadBtn onClick={() => handleKey('1')}>1</KeypadBtn>
-        <KeypadBtn onClick={() => handleKey('2')}>2</KeypadBtn>
-        <KeypadBtn onClick={() => handleKey('3')}>3</KeypadBtn>
-        <KeypadBtn onClick={() => handleKey('backspace')}><Delete className="w-5 h-5" /></KeypadBtn>
-        <KeypadBtn onClick={() => handleKey('0')}>0</KeypadBtn>
-        <KeypadBtn onClick={() => handleKey('.')}>.</KeypadBtn>
-        <KeypadBtn onClick={() => onSave(toWalletId, amount)} disabled={amount <= 0 || !toWalletId} className="col-span-3 bg-primary text-primary-foreground hover:bg-primary/90 min-h-[52px] font-semibold">Transfer</KeypadBtn>
-      </div>
+          <p className="text-xs text-muted-foreground mb-1">Amount</p>
+          <div className="mb-3 flex items-baseline gap-1 flex-wrap">
+            <input type="text" inputMode="decimal" value={amountStr} onChange={(e) => setAmountStr(formatAmountWithSpaces(e.target.value.replace(/[^\d.\s,]/g, '')))} placeholder="0" className="flex-1 min-w-[120px] text-2xl font-bold bg-transparent border-none outline-none focus:ring-0 p-0 placeholder:text-muted-foreground/50 text-foreground" />
+            <span className="text-lg font-medium text-muted-foreground shrink-0">{fromAccount.currency}</span>
+          </div>
+          <div className="mt-auto grid grid-cols-3 gap-1 p-2 bg-muted/30 rounded-xl min-h-[180px]">
+            <KeypadBtn onClick={() => handleKey('7')}>7</KeypadBtn>
+            <KeypadBtn onClick={() => handleKey('8')}>8</KeypadBtn>
+            <KeypadBtn onClick={() => handleKey('9')}>9</KeypadBtn>
+            <KeypadBtn onClick={() => handleKey('4')}>4</KeypadBtn>
+            <KeypadBtn onClick={() => handleKey('5')}>5</KeypadBtn>
+            <KeypadBtn onClick={() => handleKey('6')}>6</KeypadBtn>
+            <KeypadBtn onClick={() => handleKey('1')}>1</KeypadBtn>
+            <KeypadBtn onClick={() => handleKey('2')}>2</KeypadBtn>
+            <KeypadBtn onClick={() => handleKey('3')}>3</KeypadBtn>
+            <KeypadBtn onClick={() => handleKey('backspace')}><Delete className="w-5 h-5" /></KeypadBtn>
+            <KeypadBtn onClick={() => handleKey('0')}>0</KeypadBtn>
+            <KeypadBtn onClick={() => handleKey('.')}>.</KeypadBtn>
+            <KeypadBtn onClick={() => onSave(toWalletId, amount)} disabled={!canTransfer} className="col-span-3 bg-primary text-primary-foreground hover:bg-primary/90 min-h-[52px] font-semibold">Transfer</KeypadBtn>
+          </div>
+        </>
+      )}
     </div>
   );
 }

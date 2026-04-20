@@ -336,8 +336,9 @@ export const useFinanceStore = create<FinanceStore>()(
               get().loadPreferences(),
             ]);
           }
-          // Onlaynda API dan sync qilib local DB ni yangilaymiz
-          if (isOnline()) {
+          // Faqat local DB bo‘sh bo‘lsa (birinchi marta) onlaynda API dan to‘ldiramiz. Mavjud ma’lumotni hech qachon ustidan yozmaymiz.
+          const state = get();
+          if (isOnline() && state.wallets.length === 0) {
             try {
               const synced = await pullFromServer();
               if (synced) {

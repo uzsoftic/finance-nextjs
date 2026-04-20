@@ -1,10 +1,8 @@
 'use client';
 
 import { useEffect } from 'react';
-import { pullFromServer } from '@/lib/sync/sync';
-import { useFinanceStore } from '@/lib/store';
 
-/** Registers service worker and syncs when back online. */
+/** Registers service worker. Sync from API only when local DB is empty (see store initialize). */
 export function PwaRegister() {
   useEffect(() => {
     if (typeof window === 'undefined' || !('serviceWorker' in navigator)) return;
@@ -16,20 +14,8 @@ export function PwaRegister() {
       .catch((err) => console.warn('[PWA] SW registration failed', err));
   }, []);
 
-  useEffect(() => {
-    const handleOnline = () => {
-      pullFromServer().then((data) => {
-        if (!data) return;
-        const get = useFinanceStore.getState();
-        get.loadWallets();
-        get.loadTransactions();
-        get.loadCategories();
-        get.loadDebts();
-      });
-    };
-    window.addEventListener('online', handleOnline);
-    return () => window.removeEventListener('online', handleOnline);
-  }, []);
+  // Onlayn bo‘lganda lokal ma’lumotni API bilan almashtirmaymiz – faqat bo‘sh DB ni to‘ldiramiz initialize da. Shuning uchun bu yerdan pullFromServer chaqirmaymiz (Accounts yo‘qolmasin).
+  // Kelajakda haqiqiy backend bo‘lsa, sync queue (push) va merge logikasi qo‘shiladi.
 
   return null;
 }
